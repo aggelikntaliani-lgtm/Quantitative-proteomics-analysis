@@ -15,10 +15,13 @@ The analysis pipeline covers the following steps:
 
 ## Key Results
 
-### Volcano Plot
+### Volcano and MD Plot
 ![cancervsnormal-Volcano-Adjusted-Pval](cancervsnormal-volcano-adjusted-pval.png)
 The volcano plot displays statistical significance (negative log10 p-value) versus magnitude of change (log2 fold change) to highlight significantly enriched or depleted proteins.
 
+![Cancervsnormal-MD-Adjusted-Pval](cancervsnormal-MD-adjusted-pval.png) 
+
+
 ### P-value Histogram
-![Cancervsnormal-Pval-Hist](cancervsnormal-pval-hist.png)
+
 The p-value distribution histogram evaluates the performance of the statistical model and the prevalence of true differential features.
