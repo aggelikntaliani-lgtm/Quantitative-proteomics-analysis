@@ -23,5 +23,5 @@ The volcano plot displays statistical significance (negative log10 p-value) vers
 
 
 ### P-value Histogram
-
+![Cancervsnormal-Pval-Hist](cancervsnormal-pval-hist.png) 
 The p-value distribution histogram evaluates the performance of the statistical model and the prevalence of true differential features.
