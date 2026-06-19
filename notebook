@@ -1,0 +1,123 @@
+install.packages("devtools")
+options("install.lock"=FALSE)
+
+devtools::install_github("ByrumLab/proteoDA",
+                         dependencies = TRUE,
+                         build_vignettes= TRUE,
+                         force= TRUE)
+
+
+devtools::install_github("ByrumLab/proteoDA", dependencies = TRUE, build_vignettes = FALSE, force = TRUE)
+library(proteoDA)
+
+#data
+input_data <- read.csv(system.file("extdata/DIA_data.csv.gz",package = "proteoDA"))
+sample_metadata <- read.csv(system.file("extdata/metafile.csv", package = "proteoDA"))
+
+head(input_data)
+head(sample_metadata)
+
+intensity_data <- input_data[,5:ncol(input_data)]#select columns 5 to 21
+annotation_data <- input_data[,1:4] #select columns 1 to 4
+
+rownames(sample_metadata)
+
+rownames(sample_metadata) <- sample_metadata$data_column_name
+
+#DAlist
+
+row <- DAList(data = intensity_data,
+              annotation = annotation_data,
+              metadata = sample_metadata,
+              design = NULL,
+              eBayes_fit = NULL,
+              results = NULL,
+              tags = NULL)
+
+#preprocessing filtering
+filter_samples <- filter_samples(row, group != "Pool")
+
+#convert missing values
+filter_samples <- zero_to_missing(filter_samples)
+filter_proteins <- filter_proteins_by_group(filter_samples,
+                                            min_reps = 4,
+                                            min_groups = 1,
+                                            grouping_column = "group")
+
+#normalization
+write_norm_report(filter_proteins,
+                  grouping_column = "group",
+                  output_dir = "01_QC_report",
+                  filename = "normalization.pdf",
+                  overwrite = T,
+                  suppress_zoom_legend = FALSE,
+                  use_ggrastr = FALSE)
+
+
+normalized <- normalize_data(filter_proteins,
+                             norm_method = "cycloess")
+
+
+BiocManager::install("ggtree", force = TRUE)
+
+
+write_qc_report(normalized,
+                output_dir = "01_QC_report",
+                color_column = "group",
+                label_column = NULL,
+                filename = "QC_report.pdf",
+                overwrite = T,
+                top_proteins = 500,            #most variable proteins number
+                standardize = TRUE,
+                pca_axes = c(1,2),             #first 2 PCs
+                dist_metric = "euclidean",     #stats::dist for options
+                clust_method = "complete",     #stats::hclust for options
+                show_all_proteins = F)          #only proteins with missing data
+
+
+no_intercept <- add_design(normalized,
+                           design_formula = ~0 + group)
+
+
+no_intercept$design
+
+no_intercept <- add_contrasts(no_intercept,
+                              contrasts_vector = "cancer vs normal = cancer - normal")
+
+
+#First, fit the model
+fit <- fit_limma_model(no_intercept)
+
+#Extract results
+results <- extract_DA_results(fit,
+                              pval_thresh = 0.05,
+                              lfc_thresh = 1,
+                              adj_method = "BH",
+                              extract_intercept = F) #for models with intercept terms
+results 
+
+
+#write_limmo_tables (final)
+
+write_limma_tables(results,
+                   output_dir = "02_DA_results",
+                   overwrite = T,
+                   contrasts_subdir = NULL,
+                   summary_csv = NULL,
+                   combined_file_csv = NULL,
+                   spreadsheet_xlsx = NULL,
+                   add_filter = T)
+
+#limma plots
+
+write_limma_plots(results,
+                  grouping_column = "group",
+                  table_columns = c("uniprot_id", "protein_info"),
+                  title_column = "uniprot_id",
+                  output_dir = "02_DA_results",
+                  tmp_subdir = "tmp",
+                  overwrite = TRUE,
+                  height = 1000,
+                  width = 1000)
+
+
